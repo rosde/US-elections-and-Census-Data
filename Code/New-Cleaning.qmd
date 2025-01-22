@@ -1,0 +1,191 @@
+---
+title: "cleaning"
+format: html
+editor: visual
+---
+
+```{r}
+library(shiny)
+library(tidyverse)
+library(ggthemes)
+library(dplyr)
+library(readr)
+library(tidycensus)
+library(sf)
+```
+
+## Cleaning
+
+```{r}
+#Define regions
+Pacific <- c('WASHINGTON', 'OREGON', 'CALIFORNIA', 'HAWAII', 'ALASKA')
+Rocky_Mountain <- c('NEVADA', 'IDAHO', 'MONTANA', 'WYOMING', 'UTAH', 'COLORADO')
+Southwest <- c('ARIZONA', 'NEW MEXICO', 'OKLAHOMA', 'TEXAS')
+Midwest <- c('NORTH DAKOTA', 'SOUTH DAKOTA', 'NEBRASKA', 'KANSAS', 'MINNESOTA', 'IOWA', 'MISSOURI', 'WISCONSIN', 
+             'ILLINOIS', 'INDIANA', 'MICHIGAN', 'OHIO')
+Southeast <- c('LOUISIANA', 'ARKANSAS', 'MISSISSIPPI', 'ALABAMA', 'GEORGIA', 'FLORIDA', 'SOUTH CAROLINA', 
+               'NORTH CAROLINA', 'TENNESSEE', 'KENTUCKY', 'VIRGINIA', 'WEST VIRGINIA')
+Northeast <- c('DISTRICT OF COLUMBIA', 'MARYLAND', 'DELAWARE', 'PENNSYLVANIA', 'NEW JERSEY', 'NEW YORK', 'CONNECTICUT',
+               'RHODE ISLAND', 'MASSACHUSETTS', 'NEW HAMPSHIRE', 'VERMONT', 'MAINE')
+```
+
+```{r}
+election_data_pre <- read.csv('../data/1976-2020-president.csv')
+
+election_data <- election_data_pre %>% 
+  mutate(
+    new_party = case_when(
+    party_simplified == "DEMOCRAT" ~ "Democrat",
+    party_simplified == "REPUBLICAN" ~ "Republican",
+    TRUE ~ "Third_Party"
+  ),
+  region = case_when(
+    state %in% Pacific ~ "Pacific",
+    state %in% Rocky_Mountain ~ "Rocky Mountain",
+    state %in% Southwest ~ "Southwest",
+    state %in% Midwest ~ "Midwest",
+    state %in% Southeast ~ "Southeast",
+    TRUE ~ "Northeast"
+  )
+  ) %>% 
+  group_by(year, state, new_party, region) %>% 
+  summarize(party_total = sum(candidatevotes / totalvotes))
+
+```
+
+```{r}
+state_names <- election_data %>% pull(state) %>% unique()
+region_names <- election_data %>% pull(region) %>% unique() 
+```
+
+```{r}
+colors <- c("#0000FF", "#FF0000", "#808080")
+```
+
+```{r}
+election_data2 <- election_data_pre %>% 
+  mutate(new_party = case_when(
+    party_simplified == "DEMOCRAT" ~ "Democrat",
+    party_simplified == "REPUBLICAN" ~ "Republican",
+    TRUE ~ "Third_Party"
+  )) %>% 
+  group_by(year, state, new_party) %>% 
+  summarize(party_total = sum(candidatevotes/totalvotes))
+
+
+```
+
+```{r}
+data2000 <- election_data %>% 
+  pivot_wider(names_from = "new_party", values_from = "party_total") %>% 
+  filter(year == 2000) %>% 
+  mutate(NAME = str_to_title(state))
+
+election2000 <- get_decennial(geography = "state", 
+variables = c(total = "P003001", white = "P003003", black = "P003004", aian = "P003005", 
+              asian = "P003006", twoormore = "P003009", nhpi = "P003007", hispanic = "P004002"), year = 2000,
+geometry = TRUE)
+
+election2000 <- election2000 %>% 
+  pivot_wider(names_from = "variable", values_from = "value") %>% 
+  mutate(whiteperc = white/total) %>% 
+  mutate(blackperc = black/total) %>% 
+  mutate(aianperc = aian/total) %>% 
+  mutate(asianperc = asian/total) %>% 
+  mutate(twoormoreperc = twoormore/total) %>% 
+  mutate(nhpiperc = nhpi/total) %>% 
+  mutate(hispanicperc = hispanic/total) %>% 
+  left_join(y=data2000, by = "NAME")
+
+demModel <- lm(data = election2000 %>% st_drop_geometry(), formula = Democrat ~ whiteperc + blackperc + aianperc +
+                      asianperc + twoormoreperc + nhpiperc + hispanicperc)
+repModel <-lm(data = election2000 %>% st_drop_geometry(), formula = Republican ~ whiteperc + blackperc + aianperc +
+                asianperc + twoormoreperc + nhpiperc + hispanicperc)
+thirdModel <- lm(data = election2000 %>% st_drop_geometry(), formula = Third_Party ~ whiteperc + blackperc + aianperc +
+                   asianperc + twoormoreperc + nhpiperc + hispanicperc)
+
+election2000 <- election2000 %>% 
+  filter(!(NAME %in% c("Puerto Rico", "District of Columbia"))) %>% 
+  mutate(demPred = demModel$fitted.values) %>% 
+  mutate(repPred = repModel$fitted.values) %>% 
+  mutate(thirdPred = thirdModel$fitted.values)
+```
+
+```{r}
+data2020 <- election_data %>% 
+  pivot_wider(names_from = "new_party", values_from = "party_total") %>% 
+  filter(year == 2020) %>% 
+  mutate(NAME = str_to_title(state))
+```
+
+```{r}
+election2020_a <- get_decennial(geography = "state", 
+                              variables = c(total = "P1_001N",
+                                            white = "P1_003N",
+                                            black = "P1_004N",
+                                            aian = "P1_005N", 
+                                            asian = "P1_006N", 
+                                            twoormore = "P1_009N",
+                                            nhpi = "P1_007N",
+                                            hispanic = "P2_002N"),
+                              year = 2020,
+                              geometry = FALSE)
+
+election2020_b <- election2020_a %>% 
+  pivot_wider(names_from = "variable", values_from = "value") %>% 
+  mutate(whiteperc = white/total) %>% 
+  mutate(blackperc = black/total) %>% 
+  mutate(aianperc = aian/total) %>% 
+  mutate(asianperc = asian/total) %>% 
+  mutate(twoormoreperc = twoormore/total) %>% 
+  mutate(nhpiperc = nhpi/total) %>% 
+  mutate(hispanicperc = hispanic/total) %>% 
+  left_join(y=data2020, by = "NAME") 
+  # select(!state, !geometry)
+
+demModel <- lm(data = election2020_b %>% 
+                 st_drop_geometry(),
+               formula = 
+                 Democrat ~ whiteperc + blackperc + aianperc +
+                 asianperc + twoormoreperc + nhpiperc + hispanicperc
+               )
+
+
+repModel <-lm(data = election2020_b %>% 
+                st_drop_geometry(),
+              formula =
+                Republican ~ whiteperc + blackperc + aianperc +
+                asianperc + twoormoreperc + nhpiperc + hispanicperc
+              )
+
+thirdModel <- lm(data = election2020_b %>% 
+                   st_drop_geometry(), 
+                 formula = 
+                   Third_Party ~ whiteperc + blackperc + aianperc +
+                   asianperc + twoormoreperc + nhpiperc + hispanicperc
+                 )
+
+election2020_model_a <- election2020_b %>% 
+  filter(!(NAME %in% c("Puerto Rico", "District of Columbia"))) %>% 
+  #select(!geometry) %>%
+  mutate(demPred = demModel$fitted.values) %>% 
+  mutate(repPred = repModel$fitted.values) %>% 
+  mutate(thirdPred = thirdModel$fitted.values)
+```
+
+## Saving new datasets
+
+```{r}
+write.csv(election_data_pre, file = '../data/election_data_pre.csv')
+write_csv(election_data, file = '../data/election_data.csv')
+write.csv(state_names, file = '../data/state_names.csv')
+write.csv(region_names,file = '../data/region_names.csv')
+write.csv(colors,file = '../data/colors.csv')
+write.csv(election_data2, file = '../data/election_data2.csv')
+write.csv(data2020, file = '../data/data2020.csv')
+write.csv(election2020_b,file = '../data/election2020_b.csv')
+write.csv(election2020_model_a, file = '../data/election2020_model_a.csv')
+
+
+
+```
