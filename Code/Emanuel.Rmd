@@ -1,0 +1,61 @@
+---
+title: "Emanuel"
+output: html_document
+date: "2024-03-28"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+library(ggplot2)
+```
+
+
+```{r fig.width= 10}
+
+ggplot(data = election2020_model, aes(x = NAME)) +
+  geom_point(aes(y = Democrat, color = "Actual Democrat")) + 
+  geom_point(aes(y = Republican, color = "Actual Republican")) + 
+  geom_point(aes(y = Third_Party, color = "Actual Third Party")) +
+  geom_point(aes(y = demPred, color = "Predicted Democrat")) +
+  geom_point(aes(y = repPred, color = "Predicted Republican")) +
+  geom_point(aes(y = thirdPred, color = "Predicted Third Party")) + 
+  labs(title = "Exploratory Analysis:",
+       subtitle= "Predicting and Comparing Political Party Support Based on Demographic Factors",
+       x = "State",
+       y = "% Vote",
+       color = " Categories") + 
+  scale_color_manual(values = c("Actual Democrat" = "blue", 
+                                 "Actual Republican" = "red", 
+                                 "Actual Third Party" = "green",
+                                 "Predicted Democrat" = "lightblue", 
+                                 "Predicted Republican" = "palevioletred1", 
+                                 "Predicted Third Party" = "green2")) +
+  scale_x_discrete(guide = guide_axis(angle = 60)) + 
+  theme_minimal()
+
+
+```
+
+```{r}
+
+
+state_MN <- election_data2 %>% 
+  filter(state == "MINNESOTA")
+
+# Plot the filtered data
+ggplot(data = state_MN, aes(x = year, y = party_total, color = new_party)) +
+  geom_point() +
+  geom_smooth(se = FALSE) + 
+  scale_color_manual(values = c("Democrat" = "blue", "Republican" = "red", "Third_Party" = "green")) +
+  labs(title = paste("Voting Trends in Minnesota"),
+       x = "Year",
+       y = "Vote Percentage") +
+  theme_clean()
+
+```
+

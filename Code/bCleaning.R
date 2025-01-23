@@ -137,4 +137,4 @@ data2020 <- electionDataCreation(2020)
 predictedResults <- list("2000" = data2000, "2004" = data2004, "2008" = data2008,
                           "2012" = data2012, "2016" = data2016, "2020" = data2020)
 
-save(predictedResults, file = "brianCleaning.rda")
+save(predictedResults, file = "bCleaning.rda")

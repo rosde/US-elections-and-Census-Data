@@ -1,0 +1,13 @@
+name: US-Elections-Project
+title: US-Elections-Project
+username: edeleono
+account: edeleono
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13783940
+bundleId: 9686417
+url: https://edeleono.shinyapps.io/US-Elections-Project/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: bCleaning.R|Brianapp.R|Emanuel_files/figure-html/pressure-1.png|Emanuel.Rmd|New-Cleaning.html|Rapp.R

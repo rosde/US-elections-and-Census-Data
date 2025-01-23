@@ -13,11 +13,15 @@ library(USAboundaries)
 library(gganimate)
 library(gifski)
 library(stringr)
+library(rsconnect)
 
 #Load Dataset
-election_data_pre <- read_csv('../data/1976-2020-president.csv')
-election2020 <- read.csv('../data/election2020_b.csv')
-election2020_model <- read.csv('../data/election2020_model_a.csv')
+election_data_pre <- read_csv('data/1976-2020-president.csv')
+
+election2020 <- read.csv('data/election2020_b.csv')
+
+election2020_model <- read.csv('data/election2020_model_a.csv')
+
 
 load("bCleaning.rda") 
 
